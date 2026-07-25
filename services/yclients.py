@@ -205,13 +205,15 @@ async def create_booking(
         "phone": phone_formatted,
         "fullname": fullname,
         "email": "",
-        "comment": comment,
         "appointments": [
             {
                 "id": 1,
-                "services": [{"id": service_id}],
-                "staff_id": staff_id,
+                "services": [int(service_id)],
+                "staff_id": int(staff_id),
+                "events": [],
                 "datetime": datetime_str,
+                "chargeStatus": "",
+                "comment": comment,
             }
         ],
     }
