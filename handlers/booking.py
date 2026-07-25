@@ -567,6 +567,11 @@ async def confirm_booking(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                 success = False
             else:
                 record_id = records[0]["id"]
+        else:
+            log.error(
+                "create_booking: YClients вернул success=False. meta=%s data=%s",
+                result.get("meta"), result.get("data"),
+            )
     except Exception as e:
         log.error("create_booking error: %s", e)
         success = False
