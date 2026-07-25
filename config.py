@@ -3,14 +3,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-TELEGRAM_BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
+TELEGRAM_BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"].strip()
 
 YCLIENTS_MOCK = os.environ.get("YCLIENTS_MOCK", "false").lower() == "true"
 
 if not YCLIENTS_MOCK:
-    YCLIENTS_PARTNER_TOKEN = os.environ["YCLIENTS_PARTNER_TOKEN"]
-    YCLIENTS_USER_TOKEN = os.environ["YCLIENTS_USER_TOKEN"]
-    YCLIENTS_COMPANY_ID = int(os.environ["YCLIENTS_COMPANY_ID"])
+    YCLIENTS_PARTNER_TOKEN = os.environ["YCLIENTS_PARTNER_TOKEN"].strip()
+    YCLIENTS_USER_TOKEN = os.environ["YCLIENTS_USER_TOKEN"].strip()
+    YCLIENTS_COMPANY_ID = int(os.environ["YCLIENTS_COMPANY_ID"].strip())
 else:
     YCLIENTS_PARTNER_TOKEN = ""
     YCLIENTS_USER_TOKEN = ""
@@ -22,7 +22,7 @@ for _x in _raw_ids.split(","):
     _x = _x.strip()
     if _x.isdigit():
         ADMIN_TELEGRAM_IDS.append(int(_x))
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "").strip()
 if not ADMIN_PASSWORD:
     raise RuntimeError("ADMIN_PASSWORD не задан в .env — запуск запрещён")
 
