@@ -208,7 +208,8 @@ async def create_booking(
         "comment": comment,
         "appointments": [
             {
-                "services": [service_id],
+                "id": 1,
+                "services": [{"id": service_id}],
                 "staff_id": staff_id,
                 "datetime": datetime_str,
             }
