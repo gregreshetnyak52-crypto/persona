@@ -71,6 +71,12 @@ async def _request(method: str, url: str, **kwargs) -> dict:
                     await asyncio.sleep(10)
                     continue
                 if resp.status < 500:
+                    if resp.status >= 400:
+                        body = await resp.text()
+                        log.error(
+                            "YClients HTTP %s для %s %s: %s",
+                            resp.status, method, url, body,
+                        )
                     resp.raise_for_status()
                     return await resp.json()
                 # HTTP 5xx — сервер временно недоступен, пробуем ещё
