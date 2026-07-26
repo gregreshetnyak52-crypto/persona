@@ -1,12 +1,14 @@
 import logging
 import asyncio
 import os
+import signal
 import sys
 import time
 import traceback
 from datetime import datetime
 
 from telegram import Update
+from telegram.error import TelegramError
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler
 
 from config import TELEGRAM_BOT_TOKEN, YCLIENTS_MOCK, ADMIN_TELEGRAM_IDS, PROXY_URL, PROXY_FALLBACKS, BUSINESS_PHONE_LINK, BUSINESS_ADDRESS
@@ -16,6 +18,7 @@ from handlers.start import start, help_command, main_menu_callback, ping_command
 from handlers.booking import build_booking_handler
 from handlers.admin import build_admin_handler
 from handlers.my_bookings import build_my_bookings_handler
+from web.server import start_web_server
 
 
 logging.basicConfig(
@@ -175,8 +178,8 @@ async def post_shutdown(app) -> None:
     log.info("YClients HTTP session closed.")
 
 
-def main() -> None:
-    asyncio.run(init_db())
+async def run() -> None:
+    await init_db()
 
     builder = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN)
     if PROXY_URL:
@@ -197,8 +200,46 @@ def main() -> None:
     app.job_queue.run_repeating(reminder_job, interval=3600, first=60)
     # proxy_watchdog отключён — используется собственный стабильный SOCKS5 (microsocks)
 
-    log.info("Bot started.")
-    app.run_polling(drop_pending_updates=True)
+    # Ручной жизненный цикл вместо run_polling() — нужно, чтобы веб-сервер
+    # Mini App мог работать в том же asyncio-цикле, что и polling бота.
+    # Порядок повторяет внутреннюю реализацию run_polling() в PTB 22.x:
+    # initialize -> post_init -> updater.start_polling -> start -> (работа) ->
+    # -> updater.stop -> stop -> post_stop -> shutdown -> post_shutdown.
+    def _error_callback(exc: TelegramError) -> None:
+        app.create_task(app.process_error(error=exc, update=None))
+
+    await app.initialize()
+    if app.post_init:
+        await app.post_init(app)
+    await app.updater.start_polling(drop_pending_updates=True, error_callback=_error_callback)
+    await app.start()
+
+    web_runner = await start_web_server(app)
+
+    log.info("Bot + web server started.")
+
+    stop_event = asyncio.Event()
+    loop = asyncio.get_running_loop()
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        try:
+            loop.add_signal_handler(sig, stop_event.set)
+        except NotImplementedError:
+            pass  # напр. на Windows add_signal_handler не поддерживается
+    await stop_event.wait()
+
+    log.info("Shutting down...")
+    await web_runner.cleanup()
+    await app.updater.stop()
+    await app.stop()
+    if app.post_stop:
+        await app.post_stop(app)
+    await app.shutdown()
+    if app.post_shutdown:
+        await app.post_shutdown(app)
+
+
+def main() -> None:
+    asyncio.run(run())
 
 
 if __name__ == "__main__":

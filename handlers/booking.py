@@ -35,9 +35,15 @@ from handlers.recommendation import (
     handle_recommend_q1,
     handle_recommend_q2,
 )
-from data.masters import MASTERS
 from services import yclients
 from services.database import log_booking
+from services.catalog import (
+    CATEGORY_KEYWORDS,
+    filter_services_by_category,
+    find_master_profile,
+    master_bio_text,
+)
+from services.validators import is_valid_name, normalize_ru_phone
 from config import ADMIN_TELEGRAM_IDS, BUSINESS_PHONE_LINK
 
 log = logging.getLogger(__name__)
@@ -57,49 +63,6 @@ log = logging.getLogger(__name__)
     ENTER_PHONE,
     CONFIRM,
 ) = range(12)
-
-CATEGORY_KEYWORDS: dict[str, list[str]] = {
-    "hair": ["стрижк", "окрашив", "уход", "тонирован", "плетен", "кос", "укладк", "перманент"],
-    "nails": ["маникюр", "педикюр", "наращив", "ногт"],
-    "cosmetology": ["пилинг", "косметолог", "чистк", "лазер", "бров", "эпиляц", "экзосом", "renophase", "mediderma"],
-    "massage": ["массаж"],
-}
-
-
-def _filter_services_by_category(services: list[dict], category: str) -> list[dict]:
-    keywords = CATEGORY_KEYWORDS.get(category, [])
-    result = [
-        s for s in services
-        if any(kw in s.get("title", "").lower() for kw in keywords)
-    ]
-    return result if result else services[:15]
-
-
-def _years(n: int) -> str:
-    if 11 <= n % 100 <= 19:
-        return "лет"
-    r = n % 10
-    if r == 1:
-        return "год"
-    if 2 <= r <= 4:
-        return "года"
-    return "лет"
-
-
-def _master_profile(name: str) -> dict | None:
-    for m in MASTERS:
-        if m["name"].lower() == name.lower():
-            return m
-    return None
-
-
-def _master_bio(name: str) -> str:
-    m = _master_profile(name)
-    if m:
-        exp = m["experience"]
-        return f"_{m['bio']}_\n\nОпыт: {exp} {_years(exp)}"
-    return ""
-
 
 # ── 1. Вход в бронирование ────────────────────────────────────────────────────
 
@@ -130,7 +93,7 @@ async def category_selected(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     await query.edit_message_text("Загружаю услуги…")
     try:
         all_services = await yclients.get_services()
-        services = _filter_services_by_category(all_services, category)
+        services = filter_services_by_category(all_services, category)
     except Exception as e:
         log.error("get_services error: %s", e)
         await query.edit_message_text(
@@ -303,12 +266,12 @@ async def master_selected_by_name(update: Update, context: ContextTypes.DEFAULT_
 async def _show_master_profile(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     query = update.callback_query
     name = context.user_data["master_name"]
-    bio = _master_bio(name)
+    bio = master_bio_text(name)
     safe_name = escape_markdown(name, version=1)
     text = f"👤 *{safe_name}*\n\n{bio}" if bio else f"👤 *{safe_name}*"
     kb = master_profile_kb(name)
 
-    master = _master_profile(name)
+    master = find_master_profile(name)
     photo_sent = False
 
     if master:
@@ -482,8 +445,7 @@ async def time_selected(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
 
 async def name_entered(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     name = update.message.text.strip()
-    import re
-    if not re.match(r'^[А-Яа-яЁёA-Za-z][А-Яа-яЁёA-Za-z\s\-]{1,49}$', name):
+    if not is_valid_name(name):
         await update.message.reply_text(
             "Введите имя буквами (например: Анна или Анна Иванова).\n"
             "Для отмены — /cancel"
@@ -501,17 +463,13 @@ async def name_entered(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
 
 async def phone_entered(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     raw = update.message.text.strip()
-    phone = "".join(c for c in raw if c.isdigit())
-    if len(phone) == 10:
-        phone = "7" + phone
-    if len(phone) != 11 or phone[0] not in ("7", "8"):
+    phone = normalize_ru_phone(raw)
+    if not phone:
         await update.message.reply_text(
             "Не удалось распознать номер. Введите российский номер, например: 79001234567\n"
             "Для отмены — /cancel"
         )
         return ENTER_PHONE
-    if phone[0] == "8":
-        phone = "7" + phone[1:]
     context.user_data["client_phone"] = phone
 
     d = context.user_data

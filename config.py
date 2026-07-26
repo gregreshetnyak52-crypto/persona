@@ -47,3 +47,16 @@ PROXY_FALLBACKS: list[str] = [
 ]
 
 WEBAPP_URL = os.environ.get("WEBAPP_URL", "https://persona-krasnogorsk.ru/")
+
+# Порт для встроенного веб-сервера (Mini App + JSON API). Railway передаёт его
+# автоматически через переменную PORT.
+PORT = int(os.environ.get("PORT", "8080"))
+
+# HTTPS-адрес этого же сервиса — на него ведёт кнопка "Записаться" в Mini App.
+# Пока пусто (домен неизвестен до первого деплоя) — кнопка Mini App просто не
+# показывается, работает обычный текстовый флоу записи.
+MINI_APP_URL = os.environ.get("MINI_APP_URL", "").strip().rstrip("/")
+
+# Отключает проверку подписи Telegram initData — ТОЛЬКО для локальной разработки.
+# Никогда не включать в проде: это позволяет прислать чужой telegram user_id.
+WEBAPP_DEV_MODE = os.environ.get("WEBAPP_DEV_MODE", "false").lower() == "true"

@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Персона — Запись</title>
+<link rel="stylesheet" href="/css/style.css">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- Прогресс-шаги -->
+  <div class="progress" id="progress">
+    <div class="progress-bar" id="progress-bar"></div>
+  </div>
+
+  <!-- 1. Категории -->
+  <section class="screen" data-screen="categories">
+    <h1 class="screen-title">Выберите категорию</h1>
+    <div class="cards-grid" id="categories-list"></div>
+  </section>
+
+  <!-- 2. Услуги -->
+  <section class="screen" data-screen="services">
+    <h1 class="screen-title">Выберите услугу</h1>
+    <div class="search-box">
+      <input type="text" id="services-search" placeholder="Поиск услуги…">
+    </div>
+    <div class="list" id="services-list"></div>
+  </section>
+
+  <!-- 3. Мастера -->
+  <section class="screen" data-screen="masters">
+    <h1 class="screen-title">Выберите мастера</h1>
+    <div class="masters-carousel" id="masters-list"></div>
+    <div class="carousel-dots" id="masters-dots"></div>
+  </section>
+
+  <!-- 4. Календарь -->
+  <section class="screen" data-screen="calendar">
+    <h1 class="screen-title">Выберите дату</h1>
+    <div class="calendar-header">
+      <button class="cal-nav" id="cal-prev">‹</button>
+      <div class="cal-month" id="cal-month"></div>
+      <button class="cal-nav" id="cal-next">›</button>
+    </div>
+    <div class="calendar-weekdays">
+      <span>Пн</span><span>Вт</span><span>Ср</span><span>Чт</span><span>Пт</span><span>Сб</span><span>Вс</span>
+    </div>
+    <div class="calendar-grid" id="calendar-grid"></div>
+  </section>
+
+  <!-- 5. Время -->
+  <section class="screen" data-screen="times">
+    <h1 class="screen-title">Выберите время</h1>
+    <div class="times-grid" id="times-list"></div>
+  </section>
+
+  <!-- 6. Контакты -->
+  <section class="screen" data-screen="contact">
+    <h1 class="screen-title">Ваши данные</h1>
+    <div class="form">
+      <label class="form-label">Имя</label>
+      <input type="text" id="input-name" class="form-input" placeholder="Например: Анна" autocomplete="given-name">
+      <div class="form-error" id="error-name"></div>
+
+      <label class="form-label">Телефон</label>
+      <input type="tel" id="input-phone" class="form-input" placeholder="+7 900 123-45-67" autocomplete="tel">
+      <div class="form-error" id="error-phone"></div>
+    </div>
+  </section>
+
+  <!-- 7. Подтверждение -->
+  <section class="screen" data-screen="confirm">
+    <h1 class="screen-title">Проверьте запись</h1>
+    <div class="summary-card" id="summary-card"></div>
+  </section>
+
+  <!-- 8. Результат -->
+  <section class="screen" data-screen="result">
+    <div class="result-box" id="result-box"></div>
+  </section>
+
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/app.js"></script>
+</body>
+</html>

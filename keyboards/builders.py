@@ -1,30 +1,34 @@
 import math
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-from config import WEBAPP_URL
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
+from config import WEBAPP_URL, MINI_APP_URL
+from services.catalog import CATEGORIES
 
 SERVICES_PAGE_SIZE = 20
 
 # ── Главное меню ────────────────────────────────────────────────────────────
 
 def main_menu_kb() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("📅 Записаться", callback_data="book_start")],
+    rows = []
+    if MINI_APP_URL:
+        rows.append([InlineKeyboardButton("📅 Записаться", web_app=WebAppInfo(url=MINI_APP_URL))])
+        rows.append([InlineKeyboardButton("💬 Записаться через чат", callback_data="book_start")])
+    else:
+        rows.append([InlineKeyboardButton("📅 Записаться", callback_data="book_start")])
+    rows += [
         [InlineKeyboardButton("📋 Мои записи", callback_data="my_bookings")],
         [InlineKeyboardButton("👩‍🎨 Наши мастера", callback_data="info_masters")],
         [InlineKeyboardButton("💅 Услуги и цены", callback_data="info_services")],
         [InlineKeyboardButton("📍 Контакты и звонок", callback_data="info_contacts")],
         [InlineKeyboardButton("🌐 Наш сайт", url=WEBAPP_URL)],
-    ])
+    ]
+    return InlineKeyboardMarkup(rows)
 
 # ── Категории услуг ─────────────────────────────────────────────────────────
 
 def categories_kb() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("💇 Волосы", callback_data="cat_hair")],
-        [InlineKeyboardButton("💅 Ногтевой сервис", callback_data="cat_nails")],
-        [InlineKeyboardButton("✨ Косметология", callback_data="cat_cosmetology")],
-        [InlineKeyboardButton("🏠 Главное меню", callback_data="back_main")],
-    ])
+    rows = [[InlineKeyboardButton(c["label"], callback_data=f"cat_{c['id']}")] for c in CATEGORIES]
+    rows.append([InlineKeyboardButton("🏠 Главное меню", callback_data="back_main")])
+    return InlineKeyboardMarkup(rows)
 
 # ── Список услуг (с ценами) ───────────────────────────────────────────────────
 

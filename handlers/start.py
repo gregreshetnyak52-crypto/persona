@@ -7,6 +7,7 @@ from telegram.ext import ContextTypes
 
 from keyboards.builders import main_menu_kb, masters_gallery_kb
 from data.masters import MASTERS
+from services.catalog import years_word
 from config import ADMIN_TELEGRAM_IDS
 from services import database as db
 
@@ -51,17 +52,6 @@ CONTACTS_TEXT = (
 )
 
 
-def _years(n: int) -> str:
-    if 11 <= n % 100 <= 19:
-        return "лет"
-    r = n % 10
-    if r == 1:
-        return "год"
-    if 2 <= r <= 4:
-        return "года"
-    return "лет"
-
-
 def _master_caption(master: dict) -> str:
     exp = master["experience"]
     category_label = {
@@ -75,7 +65,7 @@ def _master_caption(master: dict) -> str:
         f"👤 *{escape_markdown(master['name'], version=1)}*\n"
         f"_{cats}_\n\n"
         f"{master['bio']}\n\n"
-        f"Опыт: {exp} {_years(exp)}"
+        f"Опыт: {exp} {years_word(exp)}"
     )
 
 
