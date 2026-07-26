@@ -38,7 +38,6 @@ from handlers.recommendation import (
 from services import yclients
 from services.database import log_booking
 from services.catalog import (
-    CATEGORY_KEYWORDS,
     filter_services_by_category,
     find_master_profile,
     master_bio_text,
