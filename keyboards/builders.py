@@ -22,7 +22,9 @@ def categories_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("💇 Волосы", callback_data="cat_hair")],
         [InlineKeyboardButton("💅 Ногтевой сервис", callback_data="cat_nails")],
+        [InlineKeyboardButton("🦶 Подология", callback_data="cat_podology")],
         [InlineKeyboardButton("✨ Косметология", callback_data="cat_cosmetology")],
+        [InlineKeyboardButton("🧖 Процедуры по телу", callback_data="cat_body")],
         [InlineKeyboardButton("🏠 Главное меню", callback_data="back_main")],
     ])
 
