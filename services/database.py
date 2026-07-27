@@ -131,6 +131,15 @@ async def cancel_booking_by_id(booking_id: int) -> None:
         await db.commit()
 
 
+async def update_booking_datetime(booking_id: int, new_datetime: str) -> None:
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "UPDATE booking_log SET appointment_datetime = ?, reminded = 0 WHERE id = ?",
+            (new_datetime, booking_id),
+        )
+        await db.commit()
+
+
 _MAX_LOGIN_ATTEMPTS = 5
 _LOCKOUT_MINUTES = 30
 

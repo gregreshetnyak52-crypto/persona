@@ -223,10 +223,58 @@ def my_bookings_kb(bookings: list[dict]) -> InlineKeyboardMarkup:
 
 def cancel_booking_kb(booking_id: int) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
+        [InlineKeyboardButton("🔄 Перенести запись", callback_data=f"mybk_reschedule_{booking_id}")],
         [InlineKeyboardButton("❌ Отменить эту запись", callback_data=f"mybk_cancel_{booking_id}")],
         [InlineKeyboardButton("← Назад к записям", callback_data="my_bookings")],
         [InlineKeyboardButton("🏠 Главное меню", callback_data="back_main")],
     ])
+
+
+def reschedule_confirm_kb() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("✅ Да, перенести", callback_data="reschedule_yes")],
+        [InlineKeyboardButton("← Отмена", callback_data="reschedule_no")],
+    ])
+
+
+def reschedule_no_dates_kb() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("← К моим записям", callback_data="my_bookings")],
+        [InlineKeyboardButton("🏠 Главное меню", callback_data="back_main")],
+    ])
+
+
+# dates_kb/times_kb используют кнопки "Назад", завязанные на состояния флоу
+# записи (back_master_choice/back_date) — их нет в ConversationHandler
+# "Мои записи", поэтому для переноса свои варианты с безопасной целью "Назад".
+
+def reschedule_dates_kb(dates: list[str]) -> InlineKeyboardMarkup:
+    rows = []
+    for i in range(0, len(dates), 3):
+        chunk = dates[i:i+3]
+        rows.append([
+            InlineKeyboardButton(_format_date(d), callback_data=f"date_{d}")
+            for d in chunk
+        ])
+    rows.append([InlineKeyboardButton("← К моим записям", callback_data="my_bookings")])
+    rows.append([InlineKeyboardButton("🏠 Главное меню", callback_data="back_main")])
+    return InlineKeyboardMarkup(rows)
+
+
+def reschedule_times_kb(slots: list[dict]) -> InlineKeyboardMarkup:
+    rows = []
+    for i in range(0, len(slots), 4):
+        chunk = slots[i:i+4]
+        rows.append([
+            InlineKeyboardButton(
+                s.get("time", s.get("datetime", "")[11:16]),
+                callback_data=f"time_{s.get('datetime', s.get('time', ''))}"
+            )
+            for s in chunk
+        ])
+    rows.append([InlineKeyboardButton("← К моим записям", callback_data="my_bookings")])
+    rows.append([InlineKeyboardButton("🏠 Главное меню", callback_data="back_main")])
+    return InlineKeyboardMarkup(rows)
 
 
 # ── Меню администратора ──────────────────────────────────────────────────────

@@ -224,12 +224,50 @@ async def create_booking(
         json=payload,
     )
     records = result.get("data", [])
-    record_id = records[0].get("id") if records else None
+    record_id = records[0].get("record_id") if records else None
     log.info(
         "create_booking: record_id=%s client=%s phone=%s datetime=%s",
         record_id, fullname, phone_formatted, datetime_str,
     )
     return result
+
+
+async def update_record(
+    record_id: int,
+    staff_id: int,
+    service_id: int,
+    datetime_str: str,
+    seance_length: int,
+    fullname: str,
+    phone: str,
+) -> bool:
+    """Переносит существующую запись на новое staff_id/datetime (например, при
+    переносе клиентом своей записи). YClients требует полный client-объект и
+    seance_length в PUT-запросе — простого diff-патча полей тут не бывает."""
+    phone_formatted = phone if phone.startswith("+") else f"+{phone}"
+    payload = {
+        "staff_id": int(staff_id),
+        "services": [{"id": int(service_id)}],
+        "client": {"phone": phone_formatted, "name": fullname},
+        "datetime": datetime_str,
+        "seance_length": seance_length,
+    }
+    try:
+        async with get_session().put(
+            f"{BASE}/record/{YCLIENTS_COMPANY_ID}/{record_id}",
+            headers=_headers(),
+            json=payload,
+        ) as resp:
+            body = await resp.text()
+            ok = resp.status in (200, 201, 204)
+            if ok:
+                log.info("update_record: запись #%s перенесена на %s", record_id, datetime_str)
+            else:
+                log.warning("update_record: HTTP %s для record_id=%s: %s", resp.status, record_id, body)
+            return ok
+    except Exception as e:
+        log.error("update_record(%s) failed: %s", record_id, e)
+        return False
 
 
 async def get_records(date: str) -> list[dict]:
