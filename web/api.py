@@ -158,11 +158,15 @@ async def api_booking(request: web.Request) -> web.Response:
         success = result.get("success", False)
         if success:
             records = result.get("data", [])
-            if not records or not records[0].get("id"):
-                log.error("api_booking: success=True но data пустой или без id: %s", result)
+            if not records or not records[0].get("record_id"):
+                log.error("api_booking: success=True но data пустой или без record_id: %s", result)
                 success = False
             else:
-                record_id = records[0]["id"]
+                # YClients в data[].id эхом возвращает наш локальный
+                # appointments[0].id из запроса — реальный ID записи лежит
+                # в отдельном поле record_id, именно его нужно сохранять
+                # для последующей отмены.
+                record_id = records[0]["record_id"]
         else:
             log.error(
                 "api_booking: YClients вернул success=False. meta=%s data=%s",

@@ -249,7 +249,7 @@ async def delete_record(record_id: int) -> bool:
             f"{BASE}/record/{YCLIENTS_COMPANY_ID}/{record_id}",
             headers=_headers(),
         ) as resp:
-            ok = resp.status == 200
+            ok = resp.status in (200, 204)  # YClients отвечает 204 No Content на успешный DELETE
             if ok:
                 log.info("delete_record: запись #%s успешно отменена", record_id)
             else:
