@@ -56,6 +56,11 @@ PORT = int(os.environ.get("PORT", "8080"))
 # Пока пусто (домен неизвестен до первого деплоя) — кнопка Mini App просто не
 # показывается, работает обычный текстовый флоу записи.
 MINI_APP_URL = os.environ.get("MINI_APP_URL", "").strip().rstrip("/")
+if MINI_APP_URL and not MINI_APP_URL.startswith(("http://", "https://")):
+    # Telegram требует полный URL со схемой — если в переменной окружения
+    # сохранили только домен (частая опечатка при копировании из Railway),
+    # достраиваем схему сами, а не роняем бота BadRequest'ом на каждый /start.
+    MINI_APP_URL = f"https://{MINI_APP_URL}"
 
 # Отключает проверку подписи Telegram initData — ТОЛЬКО для локальной разработки.
 # Никогда не включать в проде: это позволяет прислать чужой telegram user_id.
