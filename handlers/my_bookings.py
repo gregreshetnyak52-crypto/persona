@@ -11,7 +11,7 @@ from telegram.ext import (
 from keyboards.builders import my_bookings_kb, cancel_booking_kb, main_menu_kb
 from services.database import get_user_upcoming_bookings, cancel_booking_by_id
 from services import yclients
-from config import ADMIN_TELEGRAM_IDS, BUSINESS_ADDRESS
+from config import ADMIN_TELEGRAM_IDS, BUSINESS_ADDRESS, BUSINESS_PHONE_LINK
 
 log = logging.getLogger(__name__)
 
@@ -101,11 +101,22 @@ async def cancel_booking(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     await query.edit_message_text("Отменяю запись…")
 
     yclients_id = booking.get("yclients_record_id")
+    ok = True
     if yclients_id:
         try:
-            await yclients.delete_record(yclients_id)
+            ok = await yclients.delete_record(yclients_id)
         except Exception as e:
             log.warning("delete_record error for booking %s: %s", booking_id, e)
+            ok = False
+
+    if not ok:
+        await query.edit_message_text(
+            f"❌ Не удалось отменить запись в системе. Позвоните нам напрямую:\n"
+            f"📞 {BUSINESS_PHONE_LINK}",
+            parse_mode="Markdown",
+            reply_markup=main_menu_kb(),
+        )
+        return ConversationHandler.END
 
     await cancel_booking_by_id(booking_id)
 
