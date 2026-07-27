@@ -2,7 +2,10 @@
 // браузере (для визуальной отладки вне Telegram) — подменяем заглушкой.
 const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : {
   ready() {}, expand() {}, close() {}, initData: "",
-  MainButton: { show() {}, hide() {}, setText() {}, onClick() {}, offClick() {}, setParams() {} },
+  MainButton: {
+    show() {}, hide() {}, setText() {}, onClick() {}, offClick() {}, setParams() {},
+    disable() {}, enable() {}, showProgress() {}, hideProgress() {},
+  },
   BackButton: { show() {}, hide() {}, onClick() {}, offClick() {} },
   HapticFeedback: { impactOccurred() {}, notificationOccurred() {} },
   themeParams: {},
@@ -28,6 +31,7 @@ const state = {
 };
 
 let screenStack = ["categories"];
+let bookingInFlight = false;
 const mainBtn = tg.MainButton;
 
 function currentScreen() {
@@ -73,8 +77,11 @@ function updateMainButton() {
     mainBtn.offClick(onSubmitContact);
     mainBtn.onClick(onSubmitContact);
   } else if (screen === "confirm") {
+    bookingInFlight = false;
     mainBtn.setText("Подтвердить запись");
     mainBtn.show();
+    mainBtn.enable();
+    mainBtn.hideProgress();
     mainBtn.offClick(onConfirmBooking);
     mainBtn.onClick(onConfirmBooking);
   } else {
@@ -365,8 +372,16 @@ function renderSummary() {
 }
 
 async function onConfirmBooking() {
+  // Защита от повторной отправки: без этого быстрый двойной тап по кнопке
+  // (или пауза с зависшим первым запросом) уходит вторым POST /api/booking
+  // на тот же слот — первый бронирует его, второй получает отказ от
+  // YClients, и клиент видит подряд "успех" и "ошибку" по одной попытке.
+  if (bookingInFlight) return;
+  bookingInFlight = true;
   mainBtn.setText("Отправляю…");
   mainBtn.show();
+  mainBtn.disable();
+  mainBtn.showProgress(true);
   try {
     const result = await Api.book({
       init_data: tg.initData || "",
@@ -381,6 +396,8 @@ async function onConfirmBooking() {
     showResult(result.success, result.message);
   } catch (e) {
     showResult(false, "Не удалось связаться с сервером. Попробуйте ещё раз.");
+  } finally {
+    mainBtn.hideProgress();
   }
 }
 
@@ -406,6 +423,7 @@ function showResult(success, message) {
   showScreen("result");
   mainBtn.setText(success ? "Готово" : "Закрыть");
   mainBtn.show();
+  mainBtn.enable();
   mainBtn.offClick(onConfirmBooking);
   mainBtn.offClick(closeApp);
   mainBtn.onClick(closeApp);
