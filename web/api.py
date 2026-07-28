@@ -4,6 +4,7 @@ JSON API для Telegram Mini App (webapp/). Переиспользует ту �
 здесь заново не пишется.
 """
 import logging
+import time
 
 from aiohttp import web
 from telegram.helpers import escape_markdown
@@ -17,6 +18,15 @@ from services.validators import is_valid_name, normalize_ru_phone
 
 log = logging.getLogger(__name__)
 routes = web.RouteTableDef()
+
+# Дедупликация повторных сабмитов записи: клиентский JS-гард (bookingInFlight)
+# защищает только от двойного тапа внутри одной сессии страницы, но не от
+# повторного запроса после перезагрузки Mini App / сетевого ретрая. Без этого
+# второй POST на уже созданную запись уходит в YClients, получает отказ
+# (слот уже занят первым запросом) и клиент видит подряд "успех" и "ошибка"
+# по одной попытке записи.
+_recent_bookings: dict[tuple, float] = {}
+_DEDUPE_WINDOW_SEC = 30
 
 
 @routes.get("/healthz")
@@ -145,6 +155,15 @@ async def api_booking(request: web.Request) -> web.Response:
 
     ptb_app = request.app["ptb_app"]
 
+    dedupe_key = (telegram_user_id, staff_id, service_id, datetime_str)
+    now = time.monotonic()
+    for k, t in list(_recent_bookings.items()):
+        if now - t > _DEDUPE_WINDOW_SEC:
+            del _recent_bookings[k]
+    if dedupe_key in _recent_bookings:
+        log.info("api_booking: повторный сабмит уже созданной записи (%s), игнорирую", dedupe_key)
+        return web.json_response({"success": True})
+
     success = False
     record_id = None
     try:
@@ -180,6 +199,7 @@ async def api_booking(request: web.Request) -> web.Response:
     time_display = datetime_str[11:16] if len(datetime_str) >= 16 else "?"
 
     if success:
+        _recent_bookings[dedupe_key] = now
         await log_booking(
             user_id=telegram_user_id,
             yclients_record_id=record_id,
