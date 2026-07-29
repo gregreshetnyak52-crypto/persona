@@ -179,11 +179,11 @@ async def admin_menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
             f"За 30 дней: *{stats['month']}*",
         ]
         if stats["top_services"]:
-            lines.append("\n💼 *Топ услуги:*")
+            lines.append("\n💼 *Топ услуги (за всё время):*")
             for name, cnt in stats["top_services"]:
                 lines.append(f"  {escape_markdown(name, version=1)} — {cnt}")
         if stats["top_masters"]:
-            lines.append("\n👩‍🎨 *Топ мастера:*")
+            lines.append("\n👩‍🎨 *Топ мастера (за всё время):*")
             for name, cnt in stats["top_masters"]:
                 lines.append(f"  {escape_markdown(name, version=1)} — {cnt}")
         await query.edit_message_text("\n".join(lines), parse_mode="Markdown", reply_markup=admin_menu_kb())

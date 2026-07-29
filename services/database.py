@@ -241,11 +241,13 @@ async def get_stats() -> dict:
         ) as cur:
             today_count = (await cur.fetchone())[0]
         async with db.execute(
-            "SELECT COUNT(*) FROM booking_log WHERE appointment_datetime >= datetime('now', '-7 days')"
+            "SELECT COUNT(*) FROM booking_log WHERE appointment_datetime "
+            "BETWEEN datetime('now') AND datetime('now', '+7 days')"
         ) as cur:
             week_count = (await cur.fetchone())[0]
         async with db.execute(
-            "SELECT COUNT(*) FROM booking_log WHERE appointment_datetime >= datetime('now', '-30 days')"
+            "SELECT COUNT(*) FROM booking_log WHERE appointment_datetime "
+            "BETWEEN datetime('now') AND datetime('now', '+30 days')"
         ) as cur:
             month_count = (await cur.fetchone())[0]
         async with db.execute(
