@@ -105,11 +105,11 @@ YCLIENTS_COMPANY_ID=182017
 ### Опциональные переменные
 
 ```env
-# Telegram Mini App — HTTPS-адрес ЭТОГО ЖЕ сервиса (домен Railway).
+# Telegram Mini App — HTTPS-адрес ЭТОГО ЖЕ сервиса (домен на VPS).
 # Пока пусто — кнопка Mini App не показывается, работает обычный текстовый флоу.
 MINI_APP_URL=
 
-# Порт встроенного веб-сервера. Railway передаёт его автоматически через PORT.
+# Порт встроенного веб-сервера. Задаётся в .env, reverse proxy проксирует на него.
 PORT=8080
 
 # Отключает проверку initData — ТОЛЬКО для локальной разработки Mini App.
@@ -118,8 +118,7 @@ WEBAPP_DEV_MODE=false
 # Ссылка на сайт салона — кнопка «Наш сайт» в главном меню
 WEBAPP_URL=https://persona-krasnogorsk.ru/
 
-# Прокси — НЕ требуется на Railway (прямое соединение с Telegram).
-# Нужен только для хостинга с ограниченным доступом к Telegram API.
+# Прокси — нужен, только если доступ к Telegram API с сервера нестабильный.
 # PROXY_URL=socks5://user:password@host:1080
 ```
 
@@ -192,59 +191,26 @@ YCLIENTS_COMPANY_ID=182017
   автоматически, как только задан `MINI_APP_URL`; без него — обычный
   `callback_data` на классический флоу.
 
-**Включить на Railway:** после первого деплоя скопировать публичный домен
-(Settings → Networking → Public Domain) в переменную `MINI_APP_URL` (со
+**Включить:** после настройки HTTPS-домена на сервере прописать его в переменную `MINI_APP_URL` (со
 схемой `https://` — без неё Telegram отклонит кнопку `BadRequest`, но бот
 достраивает схему сам, если её забыли).
 
 ---
 
-## 🚀 Развёртывание в Production (Railway)
+## 🚀 Развёртывание в Production (Timeweb VPS)
 
-**Почему Railway:** простейший деплой из GitHub, домен и `PORT` выдаются
-автоматически, автообновление по `git push`, не нужен прокси (прямое
-соединение с Telegram API).
+Бот работает на VPS Timeweb (Ubuntu 22.04+) под systemd: один процесс
+поднимает и Telegram-polling, и веб-сервер Mini App. Адрес сервера и
+доступы в репозитории не хранятся — они у владельца.
 
-### Шаг 1: Репозиторий на GitHub
-
-```bash
-git init
-git add .
-git commit -m "Initial commit"
-git remote add origin https://github.com/ваш-юзер/persona_bot
-git push -u origin main
-```
-
-### Шаг 2: Развернуть
-
-1. [railway.app](https://railway.app) → Sign up → Connect GitHub → выбрать репозиторий
-2. Railway определит Python по `requirements.txt` и `Procfile` (`web: python3 bot.py`)
-3. Dashboard → Variables — заполнить:
-   ```env
-   TELEGRAM_BOT_TOKEN=...
-   YCLIENTS_PARTNER_TOKEN=...
-   YCLIENTS_USER_TOKEN=...
-   YCLIENTS_COMPANY_ID=182017
-   ADMIN_TELEGRAM_IDS=...
-   ADMIN_PASSWORD=...
-   ```
-4. Settings → Networking → Generate Domain — получить публичный HTTPS-домен
-5. Добавить этот домен в переменную `MINI_APP_URL` (см. раздел Mini App выше)
-6. Deploy — бот и веб-сервер запустятся вместе
-
-**Логи в реальном времени:** Dashboard → Deployments → View Logs
-**Обновление кода:** `git push` → Railway пересобирает и передеплоивает автоматически
-
-### Альтернатива: свой VPS (systemd)
-
-Если нужен полный контроль вместо Railway — любой VPS с Ubuntu 22.04+:
+### Первая установка
 
 ```bash
-apt-get update && apt-get install -y python3.10 python3.10-venv git
+apt-get update && apt-get install -y python3 python3-venv git
 git clone https://github.com/ваш-юзер/persona_bot && cd persona_bot
-python3.10 -m venv venv && source venv/bin/activate
+python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env   # заполнить переменные
+cp .env.example .env   # заполнить переменные (см. выше)
 
 cat > /etc/systemd/system/persona-bot.service << EOF
 [Unit]
@@ -269,10 +235,27 @@ EOF
 systemctl daemon-reload && systemctl enable --now persona-bot
 ```
 
-Если у хостинга нет прямого доступа к Telegram API (например, часть
-российских хостингов) — задать `PROXY_URL=socks5://user:pass@host:port`.
-Управление: `systemctl status|restart persona-bot`, `journalctl -u persona-bot -f`.
-Обновление: `git pull && systemctl restart persona-bot`.
+### Mini App (HTTPS)
+
+Telegram требует HTTPS. Встроенный веб-сервер слушает `PORT` (по умолчанию
+8080) — перед ним нужен reverse proxy (Caddy/nginx) с сертификатом на домен,
+проксирующий на `127.0.0.1:PORT`. Этот домен (со схемой `https://`)
+прописать в `MINI_APP_URL` в `.env`.
+
+### Прокси и сетевые ошибки
+
+Если доступ к Telegram API с сервера нестабильный — задать
+`PROXY_URL=socks5://user:pass@host:port` в `.env`. Разовые `NetworkError` /
+`TimedOut` в polling'е — норма: библиотека переподключается сама, бот пишет
+их в лог как warning и администраторам не шлёт.
+
+### Эксплуатация
+
+```bash
+systemctl status persona-bot       # состояние
+journalctl -u persona-bot -f       # логи в реальном времени
+git pull && systemctl restart persona-bot   # обновление кода
+```
 
 ---
 
@@ -336,7 +319,7 @@ persona_bot/
 │   ├── masters.py            # 13 мастеров и алгоритм рекомендаций
 │   └── photos/                # фото мастеров и logo.jpg
 ├── requirements.txt
-├── Procfile                  # команда запуска для Railway
+├── Procfile                  # команда запуска (для PaaS; на VPS — systemd)
 ├── .env.example               # шаблон конфигурации
 └── bot.db                    # база данных (создаётся автоматически)
 ```
@@ -394,7 +377,7 @@ persona_bot/
 | **Способы записи** | Mini App (интерактивный визард) + классический чат-флоу |
 | **Язык интерфейса** | Русский |
 | **Python** | 3.10+ |
-| **Инфраструктура** | Railway (прокси не требуется) |
+| **Инфраструктура** | Timeweb VPS, systemd + reverse proxy |
 
 ### Развёрнуто
 

@@ -8,7 +8,7 @@ import traceback
 from datetime import datetime
 
 from telegram import Update
-from telegram.error import TelegramError
+from telegram.error import NetworkError, TelegramError, TimedOut
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler
 
 from config import TELEGRAM_BOT_TOKEN, YCLIENTS_MOCK, ADMIN_TELEGRAM_IDS, PROXY_URL, PROXY_FALLBACKS, BUSINESS_PHONE_LINK, BUSINESS_ADDRESS
@@ -32,6 +32,12 @@ _last_alert: dict[str, float] = {}
 
 
 async def error_handler(update: object, context) -> None:
+    # Обрывы связи с Telegram (getUpdates и т.п.) — PTB переподключается сам,
+    # для админа это шум. Только логируем, без ответа клиенту и без алерта.
+    if isinstance(context.error, (NetworkError, TimedOut)):
+        log.warning("Сетевая ошибка Telegram (автопереподключение): %s", context.error)
+        return
+
     log.error("Необработанное исключение: %s", context.error, exc_info=context.error)
     if isinstance(update, Update) and update.effective_message:
         try:
